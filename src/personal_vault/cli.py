@@ -9,6 +9,7 @@ from pathlib import Path
 from personal_vault.chunking import CHUNKER_VERSION
 from personal_vault.config import Registry, home_dir
 from personal_vault.embedders import OpenAICompatibleEmbedder
+from personal_vault.evaluation import evaluate, load_cases
 from personal_vault.indexing import index_vault
 from personal_vault.loaders import TextLoader
 from personal_vault.models import PersonalVaultError, VaultConfig
@@ -50,6 +51,12 @@ def build_parser() -> argparse.ArgumentParser:
     find.add_argument("--vault", help="vault name; default the default vault")
     find.add_argument("-k", type=int, default=8, help="number of chunks")
     find.set_defaults(handler=run_search)
+
+    check = commands.add_parser("eval", help="measure how often the expected note is among the hits")
+    check.add_argument("--file", required=True, help='JSON list of {"question": "...", "path": "..."}')
+    check.add_argument("--vault", help="vault name; default the default vault")
+    check.add_argument("-k", type=int, default=8, help="number of chunks")
+    check.set_defaults(handler=run_eval)
 
     vaults = commands.add_parser("vaults", help="list vaults, remove one, or change the default")
     vaults.add_argument("--remove", metavar="NAME", help="delete a vault's index and registration")
@@ -104,17 +111,30 @@ def run_index(args: argparse.Namespace) -> None:
 
 
 def run_search(args: argparse.Namespace) -> None:
-    registry = Registry.load(home_dir() / "config.json")
-    vault = registry.resolve(args.vault)
-    store = open_store(vault)
-    if not vault.signature or not store.exists():
-        raise PersonalVaultError(
-            f"vault '{vault.name}' has no complete index; run /personal-vault:index name={vault.name}"
-        )
+    vault, store = open_indexed(args.vault)
     hits = search(args.question, make_embedder(vault), store, args.k)
     print(f"vault: {vault.name} ({vault.path})\n")
     for hit in hits:
         print(f"### {hit.path}:{hit.line}  score={hit.score:.3f}  {hit.heading}\n{hit.text}\n")
+
+
+def run_eval(args: argparse.Namespace) -> None:
+    cases = load_cases(Path(args.file).expanduser())
+    vault, store = open_indexed(args.vault)
+    indexed = store.file_hashes()
+    for case in cases:
+        if case.path not in indexed:
+            print(f"warning: {case.path} is not in the index", file=sys.stderr)
+    results = evaluate(cases, make_embedder(vault), store, args.k)
+    found = [result for result in results if result.rank]
+    print(f"vault: {vault.name}")
+    print(f"questions: {len(results)}")
+    print(f"found in top {args.k}: {len(found)}/{len(results)} ({100 * len(found) / len(results):.0f}%)")
+    print(f"first hit: {sum(1 for result in found if result.rank == 1)}/{len(results)}")
+    print(f"mean reciprocal rank: {sum(1 / result.rank for result in found) / len(results):.2f}")
+    for result in results:
+        if not result.rank:
+            print(f"missed: {result.case.question}\n  expected {result.case.path}\n  top hit  {result.top_path}")
 
 
 def run_vaults(args: argparse.Namespace) -> None:
@@ -193,6 +213,16 @@ def make_embedder(vault: VaultConfig) -> OpenAICompatibleEmbedder:
 
 def open_store(vault: VaultConfig) -> QdrantStore:
     return QdrantStore.open(vault.name, vault.store, index_folder(vault.name))
+
+
+def open_indexed(name: str | None) -> tuple[VaultConfig, QdrantStore]:
+    vault = Registry.load(home_dir() / "config.json").resolve(name)
+    store = open_store(vault)
+    if not vault.signature or not store.exists():
+        raise PersonalVaultError(
+            f"vault '{vault.name}' has no complete index; run /personal-vault:index name={vault.name}"
+        )
+    return vault, store
 
 
 def warn_if_remote(host: str) -> None:
