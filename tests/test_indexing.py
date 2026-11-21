@@ -84,6 +84,13 @@ def test_moved_file_is_not_embedded_again(tmp_path, embedder, store):
     assert store.client.count("test").count == 2
 
 
+def test_file_without_text_is_counted_as_empty(tmp_path, embedder, store):
+    (tmp_path / "blank.md").write_text("# only a heading\n")
+    report = run(tmp_path, embedder, store)
+    assert (report.empty, report.embedded) == (1, 0)
+    assert embedder.documents == []
+
+
 def test_exclusion_matches_decomposed_names_and_ignores_case():
     decomposed = unicodedata.normalize("NFD", "notes/X_Şifre.md")
     assert is_excluded(decomposed, ["*şifre*"])

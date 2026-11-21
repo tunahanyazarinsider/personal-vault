@@ -97,7 +97,7 @@ def run_index(args: argparse.Namespace) -> None:
     print(f"model: {vault.model} ({dimension} dimensions) at {vault.host}")
     print(
         f"files: {report.files} supported, {report.embedded} embedded ({report.chunks} chunks), "
-        f"{report.unchanged} unchanged, {report.moved} moved, {report.removed} removed"
+        f"{report.unchanged} unchanged, {report.empty} empty, {report.moved} moved, {report.removed} removed"
     )
     print(f"index: {vault.chunks} chunks")
     print(f"rebuilt: {'yes' if rebuild else 'no'}")

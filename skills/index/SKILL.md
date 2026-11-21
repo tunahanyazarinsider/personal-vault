@@ -43,6 +43,6 @@ A first run over a large folder takes minutes: run it in the background and repo
 
 ## 4. Report
 
-Show the summary lines as printed: vault, path, model, files embedded / unchanged / moved / removed, rebuilt.
+Show the summary lines as printed: vault, path, model, files embedded / unchanged / empty / moved / removed, rebuilt.
 
 On `error:`, show the message as printed; it says what is missing and the command that fixes it. If it names `ollama pull <model>`, offer to run it and do so only on the user's yes.

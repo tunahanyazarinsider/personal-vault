@@ -20,6 +20,7 @@ class IndexReport:
     embedded: int = 0
     chunks: int = 0
     unchanged: int = 0
+    empty: int = 0
     moved: int = 0
     removed: int = 0
 
@@ -54,8 +55,10 @@ def index_vault(
                 store.delete_paths([path])
             if chunks:
                 store.upsert(chunks, vectors)
-            report.embedded += 1
-            report.chunks += len(chunks)
+                report.embedded += 1
+                report.chunks += len(chunks)
+            else:
+                report.empty += 1
         if progress is not None:
             progress(done, len(on_disk))
 
