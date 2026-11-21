@@ -4,6 +4,8 @@ A Claude Code plugin that answers questions from local folders of notes: an Obsi
 
 Notes are embedded by a model you host and stored on your machine. Claude reads the matching chunks and answers with `path:line` citations.
 
+![Asking a question with /personal-vault:ask](demo/demo.gif)
+
 ## Requirements
 
 The plugin installs none of these; both must be on your machine before the first `index`.
@@ -93,3 +95,5 @@ uv run personal-vault --help
 ```
 
 Design notes: [plan/design.md](plan/design.md).
+
+The demo above is recorded from [demo/demo.tape](demo/demo.tape) over the sample notes in [demo/notes](demo/notes); the tape's header lists the commands that regenerate it.
