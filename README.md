@@ -81,10 +81,47 @@ Paths matching `*password*`, `*passwd*`, `*secret*`, `*credential*`, `*şifre*`,
 
 The index holds the text of your notes and lives in `~/.personal-vault/` (override with `PERSONAL_VAULT_HOME`), outside this repo. With a local embedding server nothing leaves your machine at index time; a non-local `host` receives your note text, and the CLI warns. At question time the matching chunks go to Claude, like any file Claude Code reads.
 
+## Storage
+
+Vectors are stored with Qdrant, in one of two modes. The mode is chosen per vault with `store=`.
+
+| | Embedded (default) | Server |
+|---|---|---|
+| Parameter | none | `store=http://localhost:6333` |
+| Needs a running Qdrant | No | Yes, whenever you index or ask |
+| Data lives in | `~/.personal-vault/index/<name>/` | The Qdrant server's own storage |
+| Search | Compares every vector | HNSW index |
+| Good for | Up to ~20,000 chunks | Larger vaults, or one Qdrant shared with other tools |
+
+### Embedded
+
+Nothing to set up. `qdrant-client` runs the store inside the plugin's Python process and writes a SQLite file. No Qdrant process, no Docker, no port. Every command loads the whole collection into memory first, so start-up time grows with the vault.
+
+Above 20,000 chunks the library prints a warning on each command. Search still works; it is a hint to move to a server.
+
+### Server
+
+Start Qdrant:
+
+```
+docker run -d -p 6333:6333 -v qdrant_data:/qdrant/storage qdrant/qdrant
+```
+
+Index a vault against it:
+
+```
+/personal-vault:index path=~/notes name=notes store=http://localhost:6333
+```
+
+The address is remembered for that vault. Each vault is one collection, named after the vault. Use a recent image (`docker pull qdrant/qdrant`): the client warns when the server is more than one minor version behind it.
+
+### Switching an existing vault
+
+Data is not migrated. Giving `store=` to a vault that was indexed in embedded mode embeds every note again, and the old SQLite file stays on disk until you delete `~/.personal-vault/index/<name>/`.
+
 ## Limits
 
 - Dense search only; the `ask` skill adds a plain text search for exact identifiers.
-- The embedded store compares every vector on each query and is meant for one person's notes. For more than ~20,000 chunks, run a Qdrant server and pass `store=`.
 - One process at a time per vault in embedded mode.
 
 ## Development

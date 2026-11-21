@@ -42,7 +42,15 @@ class QdrantStore:
     @classmethod
     def open(cls, collection: str, url: str, folder: Path) -> "QdrantStore":
         if url:
-            return cls(QdrantClient(url=url), collection)
+            client = QdrantClient(url=url)
+            try:
+                client.get_collections()
+            except Exception as error:
+                raise PersonalVaultError(
+                    f"cannot reach Qdrant at {url} ({type(error).__name__}). Start it, or index without store= "
+                    "to use the embedded store"
+                ) from error
+            return cls(client, collection)
         folder.mkdir(parents=True, exist_ok=True)
         try:
             client = QdrantClient(path=str(folder))
