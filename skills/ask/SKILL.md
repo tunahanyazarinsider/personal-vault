@@ -19,7 +19,7 @@ Read words from the start. While a word is `vault=<name>`, take it as the vault.
 Pass the question as one single-quoted shell word (escape any `'` in it):
 
 ```bash
-uv run --quiet --project "${CLAUDE_PLUGIN_ROOT}" personal-vault search '<question>' [--vault "<name>"] -k 8
+uv run --quiet --project "${CLAUDE_PLUGIN_ROOT}" personal-vault search '<question>' [--vault "<name>"]
 ```
 
 The first output line is `vault: <name> (<folder>)`. Each hit is `### <path>:<line>  score=<n>  <heading>` followed by the chunk text. Paths are relative to that folder.

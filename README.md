@@ -58,7 +58,7 @@ Settings are remembered per vault. Set `PERSONAL_VAULT_API_KEY` if the server ne
 
 `vault=<name>` first, then the question. Without `vault`, the default vault is used; with a single vault, that one.
 
-The search returns the 8 closest chunks, plus up to 4 chunks from notes linked with them: notes a hit links to with `[[wikilinks]]` or markdown links, and notes that link to a hit.
+The search returns the 16 closest chunks, plus up to 4 chunks from notes linked with them: notes a hit links to with `[[wikilinks]]` or markdown links, and notes that link to a hit.
 
 ### `vaults`
 

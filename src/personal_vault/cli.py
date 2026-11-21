@@ -13,7 +13,7 @@ from personal_vault.evaluation import evaluate, load_cases
 from personal_vault.indexing import index_vault
 from personal_vault.loaders import TextLoader
 from personal_vault.models import PersonalVaultError, VaultConfig
-from personal_vault.search import LINKED_LIMIT, link_sources, search
+from personal_vault.search import HITS_LIMIT, LINKED_LIMIT, link_sources, search
 from personal_vault.stores import QdrantStore
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
@@ -49,14 +49,14 @@ def build_parser() -> argparse.ArgumentParser:
     find = commands.add_parser("search", help="print the chunks closest to a question")
     find.add_argument("question")
     find.add_argument("--vault", help="vault name; default the default vault")
-    find.add_argument("-k", type=int, default=8, help="number of chunks")
+    find.add_argument("-k", type=int, default=HITS_LIMIT, help="number of chunks")
     find.add_argument("--linked", type=int, default=LINKED_LIMIT, help="extra chunks from notes linked with the hits")
     find.set_defaults(handler=run_search)
 
     check = commands.add_parser("eval", help="measure how often the expected note is among the hits")
     check.add_argument("--file", required=True, help='JSON list of {"question": "...", "path": "..."}')
     check.add_argument("--vault", help="vault name; default the default vault")
-    check.add_argument("-k", type=int, default=8, help="number of chunks")
+    check.add_argument("-k", type=int, default=HITS_LIMIT, help="number of chunks")
     check.set_defaults(handler=run_eval)
 
     vaults = commands.add_parser("vaults", help="list vaults, remove one, or change the default")

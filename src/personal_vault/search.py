@@ -4,6 +4,7 @@ from personal_vault.embedders import Embedder
 from personal_vault.models import Hit, note_name
 from personal_vault.stores import Store
 
+HITS_LIMIT = 16
 LINKED_LIMIT = 4
 
 

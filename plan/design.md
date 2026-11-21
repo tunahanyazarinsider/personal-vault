@@ -72,7 +72,7 @@ No session-start hook. Each skill checks `uv` before calling the CLI. The CLI na
 
 Bi-encoder: the same model embeds chunks and questions separately, compared by cosine similarity. Some models need different prefixes for questions and documents; a missing prefix degrades search silently, so prefixes are per-vault settings. `bge-m3` needs none.
 
-No reranker (cross-encoder) in the first version. Claude reads the 8 hits and discards the irrelevant ones. The OpenAI-compatible API has no rerank endpoint.
+No reranker (cross-encoder) in the first version. Claude reads the 16 hits and discards the irrelevant ones. The OpenAI-compatible API has no rerank endpoint.
 
 ## What must be running
 
@@ -165,14 +165,14 @@ The registry records an index signature: model, vector size, chunker version, do
 
 ## `ask` behaviour
 
-1. Embed the question, take the 8 closest chunks and up to 4 chunks from notes linked with them.
+1. Embed the question, take the 16 closest chunks and up to 4 chunks from notes linked with them.
 2. If the question names an exact identifier (service, table, ticket key, file name), also run a plain text search in the vault.
 3. Read around a hit when the chunk is cut off.
 4. Answer in the question's language, from the notes only, citing `path:line`. Say so when the notes do not answer it.
 
 ## Evaluation
 
-`personal-vault eval --file questions.json` runs every question of a JSON list (`question`, `path`) and prints how often the expected note is in the top 8, how often it is first, the mean reciprocal rank, and how often it is found once linked notes are counted. The questions describe private notes, so the file lives outside the repo.
+`personal-vault eval --file questions.json` runs every question of a JSON list (`question`, `path`) and prints how often the expected note is in the top 16 (`-k` changes it), how often it is first, the mean reciprocal rank, and how often it is found once linked notes are counted. The questions describe private notes, so the file lives outside the repo.
 
 ## Later
 
