@@ -121,14 +121,21 @@ Embedded mode by default, server mode with `store=`. Same client, same calls. On
 | sqlite-vec | Not 1.0 yet, no server mode |
 | LanceDB | Fine fit, but less familiar than Qdrant |
 
-Limit: embedded mode scans every vector per query and warns above 20,000 points; one process at a time. The current vault is an estimated 13,000 chunks (not measured).
+Limit: embedded mode scans every vector per query and warns above 20,000 points; one process at a time.
 
 ## Indexing
 
 - Walks the folder recursively. Skips directories starting with a dot (`.obsidian`, `.git`, `.trash`).
 - Splits at markdown headings, max 1500 characters per chunk. Each chunk is embedded with the note title and heading path in front.
+- Neighbouring sections of a note are packed into one chunk while they fit in 1500 characters. A joined section keeps its heading line in the text. Without this the measured vault gave 29,468 chunks with a median of 502 characters; with it 16,551. On a 589-note subset with 40 questions, retrieval did not get worse (expected note in the top 8: 38 before, 39 after).
 - Point id is derived from `relative path + chunk number`.
-- Payload: path, chunk number, line, heading, text, file hash.
+- Payload: path, note name, links, chunk number, line, heading, text, file hash.
+
+### Links
+
+Each chunk stores the names of the notes it links to: `[[Note]]`, `[[Note|alias]]`, `[[Note#heading]]`, `[[folder/Note]]` and `[text](note.md)`. A name is the file name without extension, lowercased. Links are stored as names, not resolved paths: a resolved path goes stale when the target note moves, because the linking note's hash does not change.
+
+Search runs a second query with the same question vector, filtered to chunks whose note name is linked from a hit, or whose links name a hit's note, excluding the hits themselves. The best 4 are returned as linked notes. Two notes with the same file name are both candidates; similarity ranks them.
 
 ### Change detection
 
@@ -158,10 +165,14 @@ The registry records an index signature: model, vector size, chunker version, do
 
 ## `ask` behaviour
 
-1. Embed the question, take the 8 closest chunks.
+1. Embed the question, take the 8 closest chunks and up to 4 chunks from notes linked with them.
 2. If the question names an exact identifier (service, table, ticket key, file name), also run a plain text search in the vault.
 3. Read around a hit when the chunk is cut off.
 4. Answer in the question's language, from the notes only, citing `path:line`. Say so when the notes do not answer it.
+
+## Evaluation
+
+`personal-vault eval --file questions.json` runs every question of a JSON list (`question`, `path`) and prints how often the expected note is in the top 8, how often it is first, the mean reciprocal rank, and how often it is found once linked notes are counted. The questions describe private notes, so the file lives outside the repo.
 
 ## Later
 
@@ -169,3 +180,4 @@ The registry records an index signature: model, vector size, chunker version, do
 - Reranker as an optional second stage.
 - A pgvector store adapter.
 - Hybrid (dense + keyword) search inside the store.
+- Keyword payload indexes on `name` and `links` for server mode.

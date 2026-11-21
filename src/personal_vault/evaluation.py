@@ -19,6 +19,7 @@ class CaseResult:
     case: Case
     rank: int
     top_path: str
+    in_linked: bool
 
 
 def load_cases(file: Path) -> list[Case]:
@@ -39,7 +40,9 @@ def load_cases(file: Path) -> list[Case]:
 def evaluate(cases: list[Case], embedder: Embedder, store: Store, limit: int) -> list[CaseResult]:
     results = []
     for case in cases:
-        paths = [hit.path for hit in search(case.question, embedder, store, limit)]
+        found = search(case.question, embedder, store, limit)
+        paths = [hit.path for hit in found.hits]
         rank = paths.index(case.path) + 1 if case.path in paths else 0
-        results.append(CaseResult(case=case, rank=rank, top_path=paths[0] if paths else ""))
+        in_linked = any(hit.path == case.path for hit in found.linked)
+        results.append(CaseResult(case=case, rank=rank, top_path=paths[0] if paths else "", in_linked=in_linked))
     return results

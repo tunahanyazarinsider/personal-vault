@@ -13,7 +13,7 @@ from personal_vault.evaluation import evaluate, load_cases
 from personal_vault.indexing import index_vault
 from personal_vault.loaders import TextLoader
 from personal_vault.models import PersonalVaultError, VaultConfig
-from personal_vault.search import search
+from personal_vault.search import LINKED_LIMIT, link_sources, search
 from personal_vault.stores import QdrantStore
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
@@ -50,6 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     find.add_argument("question")
     find.add_argument("--vault", help="vault name; default the default vault")
     find.add_argument("-k", type=int, default=8, help="number of chunks")
+    find.add_argument("--linked", type=int, default=LINKED_LIMIT, help="extra chunks from notes linked with the hits")
     find.set_defaults(handler=run_search)
 
     check = commands.add_parser("eval", help="measure how often the expected note is among the hits")
@@ -112,10 +113,15 @@ def run_index(args: argparse.Namespace) -> None:
 
 def run_search(args: argparse.Namespace) -> None:
     vault, store = open_indexed(args.vault)
-    hits = search(args.question, make_embedder(vault), store, args.k)
+    found = search(args.question, make_embedder(vault), store, args.k, args.linked)
     print(f"vault: {vault.name} ({vault.path})\n")
-    for hit in hits:
+    for hit in found.hits:
         print(f"### {hit.path}:{hit.line}  score={hit.score:.3f}  {hit.heading}\n{hit.text}\n")
+    if found.linked:
+        print("## Linked notes\n")
+    for hit in found.linked:
+        sources = ", ".join(link_sources(hit, found.hits))
+        print(f"### {hit.path}:{hit.line}  score={hit.score:.3f}  {hit.heading}\nlinked with: {sources}\n{hit.text}\n")
 
 
 def run_eval(args: argparse.Namespace) -> None:
@@ -130,6 +136,8 @@ def run_eval(args: argparse.Namespace) -> None:
     print(f"vault: {vault.name}")
     print(f"questions: {len(results)}")
     print(f"found in top {args.k}: {len(found)}/{len(results)} ({100 * len(found) / len(results):.0f}%)")
+    with_linked = [result for result in results if result.rank or result.in_linked]
+    print(f"found with linked notes: {len(with_linked)}/{len(results)}")
     print(f"first hit: {sum(1 for result in found if result.rank == 1)}/{len(results)}")
     print(f"mean reciprocal rank: {sum(1 / result.rank for result in found) / len(results):.2f}")
     for result in results:

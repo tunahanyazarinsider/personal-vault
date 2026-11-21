@@ -58,6 +58,8 @@ Settings are remembered per vault. Set `PERSONAL_VAULT_API_KEY` if the server ne
 
 `vault=<name>` first, then the question. Without `vault`, the default vault is used; with a single vault, that one.
 
+The search returns the 8 closest chunks, plus up to 4 chunks from notes linked with them: notes a hit links to with `[[wikilinks]]` or markdown links, and notes that link to a hit.
+
 ### `vaults`
 
 ```
@@ -71,7 +73,8 @@ Lists every vault with its path, model, chunk count, index size and last index t
 ## How indexing works
 
 - Walks the folder recursively, skipping directories that start with a dot (`.obsidian`, `.git`, `.trash`).
-- Splits each note at headings, then into chunks of at most 1500 characters. The note title and heading path are embedded with each chunk.
+- Splits each note at headings, then into chunks of at most 1500 characters. Neighbouring sections are packed into one chunk while they fit, so a note of many small sections does not become many small chunks. The note title and heading path are embedded with each chunk.
+- Stores the links of each chunk (`[[Note]]`, `[[Note|alias]]`, `[[Note#heading]]`, `[text](note.md)`). Links are matched by note file name, as Obsidian does; two notes with the same file name are both candidates.
 - Each file's content hash is stored with its chunks. Unchanged files are skipped, changed files have all old chunks replaced, renamed files keep their vectors, deleted or newly excluded files are removed.
 - Changing the model, the document prefix or the chunker rebuilds the index, because the old vectors are not comparable.
 
@@ -129,7 +132,10 @@ Data is not migrated. Giving `store=` to a vault that was indexed in embedded mo
 ```
 uv run pytest
 uv run personal-vault --help
+uv run personal-vault eval --file questions.json
 ```
+
+`eval` measures retrieval on your own vault. The file is a JSON list of `{"question": "...", "path": "<note path relative to the vault>"}`; the command prints how often the expected note is among the hits. Run it before and after a change to chunking or to the model. Keep the file outside the repo: it describes your notes.
 
 Design notes: [plan/design.md](plan/design.md).
 

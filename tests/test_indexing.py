@@ -1,9 +1,11 @@
 import unicodedata
 
+from personal_vault.chunking import MAX_CHARS
 from personal_vault.indexing import index_vault, is_excluded
 from personal_vault.loaders import TextLoader
 
 LOADERS = {".md": TextLoader(), ".txt": TextLoader()}
+LONG = "w" * (MAX_CHARS // 2 + 1)
 
 
 def run(root, embedder, store, exclude=None):
@@ -43,7 +45,7 @@ def test_unchanged_files_are_not_embedded_again(tmp_path, embedder, store):
 
 def test_changed_file_replaces_all_old_chunks(tmp_path, embedder, store):
     note = tmp_path / "a.md"
-    note.write_text("# One\nfirst\n# Two\nsecond\n# Three\nthird\n")
+    note.write_text(f"# One\n{LONG}\n# Two\n{LONG}\n# Three\n{LONG}\n")
     run(tmp_path, embedder, store)
     assert store.client.count("test").count == 3
 
@@ -70,7 +72,7 @@ def test_deleted_and_newly_excluded_files_are_removed(tmp_path, embedder, store)
 
 def test_moved_file_is_not_embedded_again(tmp_path, embedder, store):
     (tmp_path / "old").mkdir()
-    (tmp_path / "old" / "note.md").write_text("# A\nalpha\n# B\nbeta\n")
+    (tmp_path / "old" / "note.md").write_text(f"# A\n{LONG}\n# B\n{LONG}\n")
     run(tmp_path, embedder, store)
     embedder.documents.clear()
 
@@ -82,6 +84,8 @@ def test_moved_file_is_not_embedded_again(tmp_path, embedder, store):
     assert (report.moved, report.removed) == (1, 0)
     assert paths_in(store) == ["new/renamed.md"]
     assert store.client.count("test").count == 2
+    names = {point.payload["name"] for point in store.client.scroll("test", limit=10)[0]}
+    assert names == {"renamed"}
 
 
 def test_file_without_text_is_counted_as_empty(tmp_path, embedder, store):

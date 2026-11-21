@@ -4,7 +4,7 @@ from typing import Protocol
 
 from qdrant_client import QdrantClient, models
 
-from personal_vault.models import Chunk, Hit, PersonalVaultError
+from personal_vault.models import Chunk, Hit, PersonalVaultError, note_name
 
 PAGE = 1000
 DELETE_BATCH = 100
@@ -24,6 +24,8 @@ class Store(Protocol):
     def move_path(self, old: str, new: str) -> None: ...
 
     def search(self, vector: list[float], limit: int) -> list[Hit]: ...
+
+    def search_linked(self, vector: list[float], limit: int, hits: list[Hit]) -> list[Hit]: ...
 
     def count(self) -> int: ...
 
@@ -82,6 +84,8 @@ class QdrantStore:
                 vector=vector,
                 payload={
                     "path": chunk.path,
+                    "name": note_name(chunk.path),
+                    "links": chunk.links,
                     "index": chunk.index,
                     "line": chunk.line,
                     "heading": chunk.heading,
@@ -107,7 +111,7 @@ class QdrantStore:
             models.PointStruct(
                 id=point_id(new, point.payload["index"]),
                 vector=point.vector,
-                payload={**point.payload, "path": new},
+                payload={**point.payload, "path": new, "name": note_name(new)},
             )
             for point in points
         ]
@@ -116,7 +120,24 @@ class QdrantStore:
         self.delete_paths([old])
 
     def search(self, vector: list[float], limit: int) -> list[Hit]:
-        result = self.client.query_points(self.collection, query=vector, limit=limit, with_payload=True)
+        return self._query(vector, limit, None)
+
+    def search_linked(self, vector: list[float], limit: int, hits: list[Hit]) -> list[Hit]:
+        # ponytail: unindexed payload filter; in server mode add keyword indexes on name and links if this gets slow
+        linked_from_hits = sorted({name for hit in hits for name in hit.links})
+        hit_names = sorted({note_name(hit.path) for hit in hits})
+        if not hits or limit <= 0:
+            return []
+        conditions = [models.FieldCondition(key="links", match=models.MatchAny(any=hit_names))]
+        if linked_from_hits:
+            conditions.append(models.FieldCondition(key="name", match=models.MatchAny(any=linked_from_hits)))
+        already_found = models.HasIdCondition(has_id=[point_id(hit.path, hit.index) for hit in hits])
+        return self._query(vector, limit, models.Filter(should=conditions, must_not=[already_found]))
+
+    def _query(self, vector: list[float], limit: int, query_filter: models.Filter | None) -> list[Hit]:
+        result = self.client.query_points(
+            self.collection, query=vector, query_filter=query_filter, limit=limit, with_payload=True
+        )
         return [
             Hit(
                 path=point.payload["path"],
@@ -124,6 +145,8 @@ class QdrantStore:
                 heading=point.payload["heading"],
                 text=point.payload["text"],
                 score=point.score,
+                index=point.payload["index"],
+                links=point.payload.get("links", []),
             )
             for point in result.points
         ]
