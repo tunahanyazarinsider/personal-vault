@@ -40,6 +40,10 @@ def test_links_are_note_names_without_alias_heading_folder_or_extension():
     assert chunk_markdown(text, "note.md", "h")[0].links == ["tls handshake", "dns", "my guide"]
 
 
+def test_links_to_txt_notes_are_found():
+    assert find_links("see [[todo]] and [the log](logs/2024.txt)") == ["todo", "2024"]
+
+
 def test_hash_inside_code_fence_is_not_a_heading():
     text = "# A\n```\n# comment\n```\n"
     chunks = chunk_markdown(text, "note.md", "h")

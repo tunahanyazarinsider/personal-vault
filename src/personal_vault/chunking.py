@@ -7,7 +7,7 @@ CHUNKER_VERSION = 2
 MAX_CHARS = 1500
 HEADING = re.compile(r"^(#{1,6})\s+(.+)")
 WIKILINK = re.compile(r"\[\[([^\[\]]+)\]\]")
-MARKDOWN_LINK = re.compile(r"\]\(([^()\s]+\.md)(?:#[^()\s]*)?\)")
+MARKDOWN_LINK = re.compile(r"\]\(([^()\s]+\.(?:md|txt))(?:#[^()\s]*)?\)")
 
 
 def chunk_markdown(text: str, path: str, file_hash: str) -> list[Chunk]:

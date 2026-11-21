@@ -74,7 +74,7 @@ Lists every vault with its path, model, chunk count, index size and last index t
 
 - Walks the folder recursively, skipping directories that start with a dot (`.obsidian`, `.git`, `.trash`).
 - Splits each note at headings, then into chunks of at most 1500 characters. Neighbouring sections are packed into one chunk while they fit, so a note of many small sections does not become many small chunks. The note title and heading path are embedded with each chunk.
-- Stores the links of each chunk (`[[Note]]`, `[[Note|alias]]`, `[[Note#heading]]`, `[text](note.md)`). Links are matched by note file name, as Obsidian does; two notes with the same file name are both candidates.
+- Stores the links of each chunk (`[[Note]]`, `[[Note|alias]]`, `[[Note#heading]]`, `[text](note.md)`, `[text](note.txt)`). Links are matched by note file name, as Obsidian does; two notes with the same file name are both candidates. A note with none of these link forms gets no linked results; the plain search is unaffected.
 - Each file's content hash is stored with its chunks. Unchanged files are skipped, changed files have all old chunks replaced, renamed files keep their vectors, deleted or newly excluded files are removed.
 - Changing the model, the document prefix or the chunker rebuilds the index, because the old vectors are not comparable.
 
