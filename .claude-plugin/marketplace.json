@@ -1,0 +1,13 @@
+{
+  "name": "personal-vault",
+  "owner": {
+    "name": "Tunahan Yazar"
+  },
+  "plugins": [
+    {
+      "name": "personal-vault",
+      "description": "Ask questions over a local folder of notes, embedded with a model you host yourself.",
+      "source": "./"
+    }
+  ]
+}
