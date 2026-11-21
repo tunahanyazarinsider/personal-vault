@@ -1,0 +1,17 @@
+[project]
+name = "personal-vault"
+version = "0.1.0"
+description = "Ask questions over a local folder of notes, embedded with a model you host yourself."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["qdrant-client>=1.12"]
+
+[project.scripts]
+personal-vault = "personal_vault.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
