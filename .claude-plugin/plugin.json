@@ -1,5 +1,5 @@
 {
   "name": "personal-vault",
   "description": "Ask questions over a local folder of notes. Notes are embedded with a model you host yourself and stored on your machine.",
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
