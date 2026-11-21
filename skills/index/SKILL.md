@@ -6,7 +6,11 @@ argument-hint: "path=<folder> name=<name> default=true host=<url> model=<name> e
 
 Arguments from the user: `$ARGUMENTS`
 
-## 1. Parse
+## 1. Check uv
+
+Run `command -v uv`. If it prints nothing, tell the user "`uv` is not installed. Install it with `brew install uv` (or see https://docs.astral.sh/uv/)" and stop.
+
+## 2. Parse
 
 The arguments are `key=value` pairs. Known keys and their CLI flags:
 
@@ -27,7 +31,7 @@ A value may be quoted: `path="~/My Vault"`. A word that is not a known `key=valu
 
 If the user changes `model`, `doc_prefix` or passes `rebuild=true` on an existing vault, say first that the whole vault is embedded again.
 
-## 2. Run
+## 3. Run
 
 Pass every value as its own quoted shell word:
 
@@ -37,8 +41,8 @@ uv run --quiet --project "${CLAUDE_PLUGIN_ROOT}" personal-vault index --path "<p
 
 A first run over a large folder takes minutes: run it in the background and report when it finishes. Later runs embed only new and changed files.
 
-## 3. Report
+## 4. Report
 
 Show the summary lines as printed: vault, path, model, files embedded / unchanged / moved / removed, rebuilt.
 
-On `error:`, show the message. If it says the embedding server cannot be reached, it is not running; for Ollama the user starts the app. If the server answered 404 for the model, the model is not pulled; for Ollama offer `ollama pull <model>` and run it only on the user's yes.
+On `error:`, show the message as printed; it says what is missing and the command that fixes it. If it names `ollama pull <model>`, offer to run it and do so only on the user's yes.

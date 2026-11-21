@@ -1,7 +1,9 @@
 import argparse
 import os
+import shutil
 import sys
 import urllib.parse
+from datetime import datetime
 from pathlib import Path
 
 from personal_vault.chunking import CHUNKER_VERSION
@@ -48,6 +50,11 @@ def build_parser() -> argparse.ArgumentParser:
     find.add_argument("--vault", help="vault name; default the default vault")
     find.add_argument("-k", type=int, default=8, help="number of chunks")
     find.set_defaults(handler=run_search)
+
+    vaults = commands.add_parser("vaults", help="list vaults, remove one, or change the default")
+    vaults.add_argument("--remove", metavar="NAME", help="delete a vault's index and registration")
+    vaults.add_argument("--default", metavar="NAME", help="make a vault the default")
+    vaults.set_defaults(handler=run_vaults)
     return parser
 
 
@@ -80,6 +87,8 @@ def run_index(args: argparse.Namespace) -> None:
         progress=print_progress,
     )
     vault.signature = signature
+    vault.chunks = store.count()
+    vault.indexed_at = datetime.now().isoformat(sep=" ", timespec="minutes")
     registry.save()
 
     default = registry.resolve(None).name if registry.vaults else ""
@@ -90,6 +99,7 @@ def run_index(args: argparse.Namespace) -> None:
         f"files: {report.files} supported, {report.embedded} embedded ({report.chunks} chunks), "
         f"{report.unchanged} unchanged, {report.moved} moved, {report.removed} removed"
     )
+    print(f"index: {vault.chunks} chunks")
     print(f"rebuilt: {'yes' if rebuild else 'no'}")
 
 
@@ -105,6 +115,55 @@ def run_search(args: argparse.Namespace) -> None:
     print(f"vault: {vault.name} ({vault.path})\n")
     for hit in hits:
         print(f"### {hit.path}:{hit.line}  score={hit.score:.3f}  {hit.heading}\n{hit.text}\n")
+
+
+def run_vaults(args: argparse.Namespace) -> None:
+    registry = Registry.load(home_dir() / "config.json")
+    if args.remove is not None:
+        vault = registry.resolve(args.remove)
+        if vault.store:
+            open_store(vault).drop()
+        else:
+            shutil.rmtree(index_folder(vault.name), ignore_errors=True)
+        del registry.vaults[vault.name]
+        if registry.default == vault.name:
+            registry.default = None
+        registry.save()
+        print(f"removed vault '{vault.name}'; the notes in {vault.path} were not touched")
+    if args.default is not None:
+        registry.default = registry.resolve(args.default).name
+        registry.save()
+        print(f"default vault: {registry.default}")
+    if args.remove is None and args.default is None:
+        print_vaults(registry)
+
+
+def print_vaults(registry: Registry) -> None:
+    if not registry.vaults:
+        print("no vaults yet. Create one with /personal-vault:index path=<folder>")
+        return
+    default = registry.default if registry.default in registry.vaults else None
+    if default is None and len(registry.vaults) == 1:
+        default = next(iter(registry.vaults))
+    for name in sorted(registry.vaults):
+        vault = registry.vaults[name]
+        print(f"{name}{' (default)' if name == default else ''}")
+        print(f"  path: {vault.path}")
+        print(f"  model: {vault.model} at {vault.host}")
+        print(f"  store: {vault.store or 'embedded, ' + folder_size(index_folder(name))}")
+        print(f"  chunks: {vault.chunks or 'unknown'}")
+        print(f"  indexed: {vault.indexed_at or 'unknown'}")
+        if vault.exclude:
+            print(f"  exclude: {', '.join(vault.exclude)}")
+
+
+def folder_size(folder: Path) -> str:
+    total = sum(file.stat().st_size for file in folder.rglob("*") if file.is_file()) if folder.is_dir() else 0
+    return f"{total / 1_000_000:.0f} MB"
+
+
+def index_folder(name: str) -> Path:
+    return home_dir() / "index" / name
 
 
 def apply_overrides(vault: VaultConfig, args: argparse.Namespace) -> None:
@@ -133,7 +192,7 @@ def make_embedder(vault: VaultConfig) -> OpenAICompatibleEmbedder:
 
 
 def open_store(vault: VaultConfig) -> QdrantStore:
-    return QdrantStore.open(vault.name, vault.store, home_dir() / "index" / vault.name)
+    return QdrantStore.open(vault.name, vault.store, index_folder(vault.name))
 
 
 def warn_if_remote(host: str) -> None:

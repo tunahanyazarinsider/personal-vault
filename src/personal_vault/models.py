@@ -42,3 +42,5 @@ class VaultConfig:
     exclude: list[str] = field(default_factory=list)
     store: str = ""
     signature: str = ""
+    chunks: int = 0
+    indexed_at: str = ""

@@ -6,10 +6,18 @@ Notes are embedded by a model you host and stored on your machine. Claude reads 
 
 ## Requirements
 
-- [uv](https://docs.astral.sh/uv/)
-- An OpenAI-compatible embedding server, running whenever you index or ask. With [Ollama](https://ollama.com): `ollama pull bge-m3`
+The plugin installs none of these; both must be on your machine before the first `index`.
 
-Nothing else: the vector store (Qdrant) runs inside the plugin's Python process, on files in `~/.personal-vault/`.
+| Needed | Install | Check |
+|---|---|---|
+| [uv](https://docs.astral.sh/uv/) | `brew install uv` | `uv --version` |
+| An OpenAI-compatible embedding server with a model | [Ollama](https://ollama.com), then `ollama pull bge-m3` | `curl localhost:11434/api/version` |
+
+The embedding server must be running whenever you index or ask: the question is embedded with the same model as the notes. If something is missing, the command stops and prints what to install.
+
+Any other OpenAI-compatible server works (HF TEI, vLLM, LM Studio, OpenAI): pass `host=` and `model=` to `index`.
+
+Nothing else is needed: the vector store (Qdrant) runs inside the plugin's Python process, on files in `~/.personal-vault/`. The first command takes a few seconds longer while `uv` installs the Python dependencies.
 
 ## Install
 
@@ -47,6 +55,16 @@ Settings are remembered per vault. Set `PERSONAL_VAULT_API_KEY` if the server ne
 ### `ask`
 
 `vault=<name>` first, then the question. Without `vault`, the default vault is used; with a single vault, that one.
+
+### `vaults`
+
+```
+/personal-vault:vaults
+/personal-vault:vaults default=notes
+/personal-vault:vaults remove=notes
+```
+
+Lists every vault with its path, model, chunk count, index size and last index time; changes the default; or deletes a vault's index after asking. Removing a vault never touches the notes.
 
 ## How indexing works
 

@@ -55,12 +55,18 @@ class OpenAICompatibleEmbedder:
                 payload = json.load(response)
         except urllib.error.HTTPError as error:
             detail = error.read().decode(errors="replace")[:300]
+            if error.code == 404:
+                raise PersonalVaultError(
+                    f"model '{self.model}' is not available at {self.url}: {detail}\n"
+                    f"With Ollama, run: ollama pull {self.model}"
+                ) from error
             raise PersonalVaultError(
                 f"embedding server answered {error.code} for model '{self.model}': {detail}"
             ) from error
         except urllib.error.URLError as error:
             raise PersonalVaultError(
-                f"cannot reach the embedding server at {self.url} ({error.reason}). Is it running?"
+                f"cannot reach the embedding server at {self.url} ({error.reason}).\n"
+                "Start it and try again. With Ollama: open the Ollama app (install: https://ollama.com)"
             ) from error
         except (OSError, ValueError) as error:
             raise PersonalVaultError(f"embedding request to {self.url} failed: {error}") from error

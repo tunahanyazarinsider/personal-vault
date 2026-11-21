@@ -25,6 +25,10 @@ class Store(Protocol):
 
     def search(self, vector: list[float], limit: int) -> list[Hit]: ...
 
+    def count(self) -> int: ...
+
+    def drop(self) -> None: ...
+
 
 def point_id(path: str, index: int) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"{path}#{index}"))
@@ -115,6 +119,13 @@ class QdrantStore:
             )
             for point in result.points
         ]
+
+    def count(self) -> int:
+        return self.client.count(self.collection).count
+
+    def drop(self) -> None:
+        if self.exists():
+            self.client.delete_collection(self.collection)
 
     def _scroll(self, query_filter: models.Filter | None, with_vectors: bool) -> list[models.Record]:
         records = []

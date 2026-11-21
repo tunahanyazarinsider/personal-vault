@@ -40,6 +40,20 @@ The user writes `key=value`. The skill turns it into `--flag` arguments for the 
 | `vault` | the default vault | Vault to search |
 | rest of the text | required | The question |
 
+### `vaults`
+
+```
+/personal-vault:vaults
+/personal-vault:vaults default=second
+/personal-vault:vaults remove=second
+```
+
+Lists vaults (path, model, chunks, index size, last indexed), changes the default, or deletes a vault's index and registration after the user confirms. The notes folder is never touched. One skill instead of three: all are small registry operations.
+
+### Missing requirements
+
+No session-start hook. Each skill checks `uv` before calling the CLI. The CLI names the fix when the embedding server is unreachable or the model is missing (`ollama pull <model>`). Nothing is printed when everything is in place.
+
 ### Parsing rules
 
 - Only known keys are parameters: `path`, `name`, `default`, `host`, `model`, `query_prefix`, `doc_prefix`, `exclude`, `store`, `rebuild`, `vault`. Anything else is part of the question.
@@ -77,8 +91,9 @@ personal-vault/
 ├── .claude-plugin/{plugin.json, marketplace.json}
 ├── skills/index/SKILL.md      key=value -> CLI flags, reports the result
 ├── skills/ask/SKILL.md        calls search, Claude writes the answer
+├── skills/vaults/SKILL.md     list, remove, change default
 ├── src/personal_vault/
-│   ├── cli.py                 argparse; builds the objects and wires them
+│   ├── cli.py                 argparse; builds the objects and wires them; index, search, vaults
 │   ├── config.py              registry: register, resolve, default
 │   ├── models.py              Chunk, Hit, VaultConfig, PersonalVaultError
 │   ├── loaders.py             Loader protocol + TextLoader (.md, .txt)
